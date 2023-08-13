@@ -188,7 +188,7 @@ impl<'a, IP: gpio::InterruptPin<'a>> SyscallDriver for GPIO<'a, IP> {
     /// - `7`: Configure interrupt on `pin` with `irq_config` in 0x00XX00000
     /// - `8`: Disable interrupt on `pin`.
     /// - `9`: Disable `pin`.
-    /// - `10`: Number of pins
+    /// - `10`: Get number of GPIO ports supported.
     fn command(
         &self,
         command_num: usize,
