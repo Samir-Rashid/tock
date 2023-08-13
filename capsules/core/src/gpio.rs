@@ -178,7 +178,7 @@ impl<'a, IP: gpio::InterruptPin<'a>> SyscallDriver for GPIO<'a, IP> {
     ///
     /// ### `command_num`
     ///
-    /// - `0`: Reserved for driver check.
+    /// - `0`: Driver existence check.
     /// - `1`: Enable output on `pin`.
     /// - `2`: Set `pin`.
     /// - `3`: Clear `pin`.

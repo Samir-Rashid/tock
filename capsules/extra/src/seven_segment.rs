@@ -361,7 +361,7 @@ impl<'a, P: Pin, A: Alarm<'a>, const NUM_DIGITS: usize> SyscallDriver
     ///
     /// ### `command_num`
     ///
-    /// - `0`: Driver check.
+    /// - `0`: Driver existence check.
     /// - `1`: Prints one digit at the requested position. Returns `INVAL` if the
     ///        position is not valid.
     /// - `2`: Clears all digits currently being displayed.

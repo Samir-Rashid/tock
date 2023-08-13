@@ -118,7 +118,7 @@ impl<'a, T: Time> SyscallDriver for ReadOnlyStateDriver<'a, T> {
     ///
     /// ### `command_num`
     ///
-    /// - `0`: Driver check.
+    /// - `0`: Driver existence check.
     /// - `1`: Get version.
     fn command(
         &self,

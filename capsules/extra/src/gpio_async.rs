@@ -143,7 +143,7 @@ impl<Port: hil::gpio_async::Port> SyscallDriver for GPIOAsync<'_, Port> {
     ///
     /// ### `command_num`
     ///
-    /// - `0`: Driver check.
+    /// - `0`: Driver existence check.
     /// - `1`: Set a pin as an output.
     /// - `2`: Set a pin high by setting it to 1.
     /// - `3`: Clear a pin by setting it to 0.
@@ -170,11 +170,11 @@ impl<Port: hil::gpio_async::Port> SyscallDriver for GPIOAsync<'_, Port> {
         let other = (data >> 16) & 0xFFFF;
         let ports = self.ports.as_ref();
 
-        // Driver check.
+        // Driver existence check.
         if command_number == 0 {
             CommandReturn::success();
         }
-        
+
         // Special case command 10; everything else results in a process-owned,
         // split-phase call.
         if command_number == 10 {

@@ -1191,7 +1191,7 @@ impl<'a, A: hil::adc::Adc<'a> + hil::adc::AdcHighSpeed<'a>> SyscallDriver for Ad
             return CommandReturn::failure(ErrorCode::NOMEM);
         }
         match command_num {
-            // Check if present
+            // Driver existence check
             0 => CommandReturn::success(),
 
             // Single sample on channel
