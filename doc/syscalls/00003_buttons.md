@@ -17,13 +17,14 @@ main file.
 
   * ### Command number: `0`
 
-    **Description**: Existence check.
+    **Description**: How many buttons are supported on this board.
 
-    **Argument 1**: Unused
+    **Argument 1**: unused
 
-    **Argument 2**: Unused
+    **Argument 2**: unused
 
-    **Returns**: Success, or `NODEVICE` if this driver is not present on the board.
+    **Returns**: The number of buttons on the board, or `NODEVICE` if this
+    driver is not present on the board.
 
   * ### Command number: `1`
 
@@ -63,16 +64,6 @@ main file.
 
     **Returns**: 0 if the button is not currently pressed, and 1 button is
     currently being pressed.
-
-    ### Command number: `4`
-    
-    **Description**: How many buttons are supported on this board.
-
-    **Argument 1**: unused
-
-    **Argument 2**: unused
-
-    **Returns**: The number of buttons on the board,
 
 ## Subscribe
 

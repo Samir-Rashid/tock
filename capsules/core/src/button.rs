@@ -36,13 +36,12 @@
 //!
 //! #### `command_num`
 //!
-//! - `0`: Driver existence check.
+//! - `0`: Driver existence check and get number of buttons on the board.
 //! - `1`: Enable interrupts for a given button. This will enable both press
 //!   and depress events.
 //! - `2`: Disable interrupts for a button. No affect or reliance on
 //!   registered callback.
 //! - `3`: Read the current state of the button.
-//! - `4`: Get number of buttons on the board.
 //!
 //! ### Subscribe
 //!
@@ -139,13 +138,12 @@ impl<'a, P: gpio::InterruptPin<'a>> SyscallDriver for Button<'a, P> {
     ///
     /// ### `command_num`
     ///
-    /// - `0`: Driver existence check.
+    /// - `0`: Driver existence check and get number of buttons on the board.
     /// - `1`: Enable interrupts for a given button. This will enable both press
     ///   and depress events.
     /// - `2`: Disable interrupts for a button. No affect or reliance on
     ///   registered callback.
     /// - `3`: Read the current state of the button.
-    /// - `4`: Get number of buttons on the board.
     fn command(
         &self,
         command_num: usize,
@@ -155,8 +153,11 @@ impl<'a, P: gpio::InterruptPin<'a>> SyscallDriver for Button<'a, P> {
     ) -> CommandReturn {
         let pins = self.pins;
         match command_num {
-            // check existence
-            0 => CommandReturn::success(),
+            // return button count
+            // TODO(Tock 3.0): TRD104 specifies that Command 0 should return Success, not SuccessU32,
+            // but this driver is unchanged since it has been stabilized. It will be brought into
+            // compliance as part of the next major release of Tock. See #3613.
+            0 => CommandReturn::success_u32(pins.len() as u32),
 
             // enable interrupts for a button
             1 => {
@@ -214,9 +215,6 @@ impl<'a, P: gpio::InterruptPin<'a>> SyscallDriver for Button<'a, P> {
                     CommandReturn::success_u32(button_state as u32)
                 }
             }
-
-            // get button count
-            4 => CommandReturn::success_u32(pins.len() as u32),
 
             // default
             _ => CommandReturn::failure(ErrorCode::NOSUPPORT),
