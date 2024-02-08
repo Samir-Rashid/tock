@@ -235,6 +235,8 @@ pub struct Platform {
     kv_driver: &'static KVDriver,
     scheduler: &'static RoundRobinSched<'static>,
     systick: cortexm4::systick::SysTick,
+    nonvolatile_storage:
+        &'static capsules_extra::nonvolatile_storage_driver::NonvolatileStorage<'static>,
 }
 
 impl SyscallDriverLookup for Platform {
@@ -260,6 +262,7 @@ impl SyscallDriverLookup for Platform {
             capsules_core::spi_controller::DRIVER_NUM => f(Some(self.spi_controller)),
             capsules_extra::net::thread::driver::DRIVER_NUM => f(Some(self.thread_driver)),
             capsules_extra::kv_driver::DRIVER_NUM => f(Some(self.kv_driver)),
+            capsules_extra::nonvolatile_storage_driver::DRIVER_NUM => f(Some(self.nonvolatile_storage)),
             _ => f(None),
         }
     }
@@ -844,14 +847,14 @@ pub unsafe fn main() {
     // Uncomment to experiment with this.
 
     // // Create the strings we include in the USB descriptor.
-    // let strings = static_init!(
-    //     [&str; 3],
-    //     [
-    //         "Nordic Semiconductor", // Manufacturer
-    //         "nRF52840dk - TockOS",  // Product
-    //         "serial0001",           // Serial number
-    //     ]
-    // );
+    let strings = static_init!(
+        [&str; 3],
+        [
+            "Nordic Semiconductor", // Manufacturer
+            "nRF52840dk - TockOS",  // Product
+            "serial0001",           // Serial number
+        ]
+    );
 
     // CTAP Example
     //
@@ -886,6 +889,31 @@ pub unsafe fn main() {
     // keyboard_hid.attach();
 
     //--------------------------------------------------------------------------
+    // NONVOLATILE STORAGE
+    //--------------------------------------------------------------------------
+
+    // Kernel storage region, allocated with the storage_volume!
+    // macro in common/utils.rs
+    extern "C" {
+        /// Beginning on the ROM region containing app images.
+        static _sstorage: u8;
+        static _estorage: u8;
+    }
+
+    let nonvolatile_storage = components::nonvolatile_storage::NonvolatileStorageComponent::new(
+        board_kernel,
+        capsules_extra::nonvolatile_storage_driver::DRIVER_NUM,
+        &nrf52840_peripherals.nrf52.nvmc,
+        0x08038000, // Start address for userspace accesible region // TODO: check these values
+        0x8000,     // Length of userspace accesible region (16 pages)
+        &_sstorage as *const u8 as usize,
+        &_estorage as *const u8 as usize - &_sstorage as *const u8 as usize,
+    )
+    .finalize(components::nonvolatile_storage_component_static!(
+        nrf52840::nvmc::Nvmc
+    ));
+
+    //--------------------------------------------------------------------------
     // PLATFORM SETUP, SCHEDULER, AND START KERNEL LOOP
     //--------------------------------------------------------------------------
 
@@ -917,6 +945,7 @@ pub unsafe fn main() {
         kv_driver,
         scheduler,
         systick: cortexm4::systick::SysTick::new_with_calibration(64000000),
+        nonvolatile_storage: nonvolatile_storage,
     };
 
     let _ = platform.pconsole.start();
