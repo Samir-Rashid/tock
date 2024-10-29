@@ -75,6 +75,8 @@ use core::ptr::addr_of;
 use capsules_core::virtualizers::virtual_alarm::{MuxAlarm, VirtualMuxAlarm};
 use capsules_extra::net::ieee802154::MacAddress;
 use capsules_extra::net::ipv6::ip_utils::IPAddr;
+use components::debug_queue::DebugQueueComponent;
+use components::{debug_queue, debug_queue_component_static};
 use kernel::component::Component;
 use kernel::hil::led::LedLow;
 use kernel::hil::time::Counter;
@@ -200,6 +202,7 @@ pub type Eui64Driver = components::eui64::Eui64ComponentType;
 
 /// Supported drivers by the platform
 pub struct Platform {
+    debug_queue: (),
     ble_radio: &'static capsules_extra::ble_advertising_driver::BLE<
         'static,
         nrf52840::ble_radio::Radio<'static>,
@@ -625,6 +628,8 @@ pub unsafe fn start() -> (
     //--------------------------------------------------------------------------
     // BLE
     //--------------------------------------------------------------------------
+    let debug_queue =
+        DebugQueueComponent::new().finalize(components::debug_queue_component_static!());
 
     let ble_radio = components::ble::BLEComponent::new(
         board_kernel,
@@ -889,6 +894,7 @@ pub unsafe fn start() -> (
         .finalize(components::round_robin_component_static!(NUM_PROCS));
 
     let platform = Platform {
+        debug_queue,
         button,
         ble_radio,
         pconsole,

@@ -23,13 +23,15 @@ use core::mem::MaybeUninit;
 use kernel::collections::ring_buffer::RingBuffer;
 use kernel::component::Component;
 
+pub const BUF_SIZE: usize = 8192;
+
 #[macro_export]
 macro_rules! debug_queue_component_static {
     () => {{
         let ring = kernel::static_buf!(kernel::collections::ring_buffer::RingBuffer<'static, u8>);
         let queue = kernel::static_buf!(kernel::debug::DebugQueue);
         let wrapper = kernel::static_buf!(kernel::debug::DebugQueueWrapper);
-        let buffer = kernel::static_buf!([u8; 1024]);
+        let buffer = kernel::static_buf!([u8; components::debug_queue::BUF_SIZE]);
 
         (ring, queue, wrapper, buffer)
     };};
@@ -48,12 +50,12 @@ impl Component for DebugQueueComponent {
         &'static mut MaybeUninit<RingBuffer<'static, u8>>,
         &'static mut MaybeUninit<kernel::debug::DebugQueue>,
         &'static mut MaybeUninit<kernel::debug::DebugQueueWrapper>,
-        &'static mut MaybeUninit<[u8; 1024]>,
+        &'static mut MaybeUninit<[u8; BUF_SIZE]>,
     );
     type Output = ();
 
     fn finalize(self, s: Self::StaticInput) -> Self::Output {
-        let buffer = s.3.write([0; 1024]);
+        let buffer = s.3.write([0; BUF_SIZE]);
         let ring_buffer = s.0.write(RingBuffer::new(buffer));
         let debug_queue = s.1.write(kernel::debug::DebugQueue::new(ring_buffer));
         let debug_queue_wrapper =
