@@ -492,6 +492,8 @@ pub struct ProcessStandard<'a, C: 'static + Chip, D: 'static + ProcessStandardDe
     completion_code: OptionalCell<Option<u32>>,
 
     /// Values kept so that we can print useful debug messages when apps fault.
+    // debug: MapCell<ProcessStandardDebug>,
+    num_context_switches: Cell<usize>,
     debug: D,
 }
 
@@ -1334,8 +1336,18 @@ impl<C: Chip, D: 'static + ProcessStandardDebug> Process for ProcessStandard<'_,
             }
         }
     }
-
+    // let mut x = 0;
     fn switch_to(&self) -> Option<syscall::ContextSwitchReason> {
+        // Increment the number of context switches for this process.
+        /*
+                self.num_context_switches
+                    .set(self.num_context_switches.get() + 1);
+
+                if self.num_context_switches.get() % 250 == 0 {
+                    debug!("ctxt switch {}", self.num_context_switches.get());
+                    // debug!();
+                }
+        */
         // Cannot switch to an invalid process
         if !self.is_running() {
             return None;
@@ -1891,6 +1903,7 @@ impl<C: 'static + Chip, D: 'static + ProcessStandardDebug> ProcessStandard<'_, C
         process.kernel_memory_break = Cell::new(kernel_memory_break);
         process.app_break = Cell::new(initial_app_brk);
         process.grant_pointers = MapCell::new(grant_pointers);
+        process.num_context_switches = Cell::new(0);
 
         process.credential = pb.credential.get();
         process.footers = pb.footers;

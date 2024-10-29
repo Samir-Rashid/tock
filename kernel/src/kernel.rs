@@ -59,6 +59,7 @@ pub struct Kernel {
     /// created and the data structures for grants have already been
     /// established.
     grants_finalized: Cell<bool>,
+    num_kernel_entrances: Cell<usize>,
 }
 
 /// Represents the different outcomes when trying to allocate a grant region
@@ -93,6 +94,7 @@ impl Kernel {
             process_identifier_max: Cell::new(0),
             grant_counter: Cell::new(0),
             grants_finalized: Cell::new(false),
+            num_kernel_entrances: Cell::new(0),
         }
     }
 
@@ -367,8 +369,15 @@ impl Kernel {
         _capability: &dyn capabilities::MainLoopCapability,
     ) {
         let scheduler = resources.scheduler();
+        // TODO: tockloader should print the state every app is in (terminated)
 
         resources.watchdog().tickle();
+        /*
+        // self.num_kernel_entrances.increment();
+        if self.num_kernel_entrances.get() % 100 == 0 {
+            debug!("kernel {}", self.num_kernel_entrances.get());
+        }
+        */
         unsafe {
             // Ask the scheduler if we should do tasks inside of the kernel,
             // such as handle interrupts. A scheduler may want to prioritize
@@ -383,6 +392,8 @@ impl Kernel {
                 false => {
                     // No kernel work ready, so ask scheduler for a process.
                     match scheduler.next() {
+                        // count and print num times this is run
+                        // debug!("{:?} kernel entrances", count);
                         SchedulingDecision::RunProcess((processid, timeslice_us)) => {
                             self.process_map_or((), processid, |process| {
                                 let (reason, time_executed) =
@@ -508,6 +519,10 @@ impl Kernel {
         // no longer wants to execute this process or if it exceeds its
         // timeslice.
         loop {
+            // TODO: this checking should be at the end to imitate a
+            // do while loop
+
+            // TODO: fix the code snippet for IPC in the Tock book
             let stop_running = match scheduler_timer.get_remaining_us() {
                 Some(us) => us <= MIN_QUANTA_THRESHOLD_US,
                 None => true,
@@ -529,6 +544,7 @@ impl Kernel {
                 return_reason = process::StoppedExecutingReason::KernelPreemption;
                 break;
             }
+            self.num_kernel_entrances.increment();
 
             // Check if this process is actually ready to run. If not, we don't
             // try to run it. This case can happen if a process faults and is
@@ -548,8 +564,8 @@ impl Kernel {
                     resources
                         .context_switch_callback()
                         .context_switch_hook(process);
-                    process.setup_mpu();
-                    chip.mpu().enable_app_mpu();
+                    // process.setup_mpu();
+                    // chip.mpu().enable_app_mpu();
                     scheduler_timer.arm();
                     let context_switch_reason = process.switch_to();
                     scheduler_timer.disarm();
@@ -557,6 +573,11 @@ impl Kernel {
 
                     // Now the process has returned back to the kernel. Check
                     // why and handle the process as appropriate.
+                    // num_times_executed += 1;
+                    // if num_times_executed % 1 == 0 {
+                    //     debug!("{:?} ran {}", process.processid(), num_times_executed);
+                    // }
+
                     match context_switch_reason {
                         Some(ContextSwitchReason::Fault) => {
                             // The app faulted, check if the chip wants to
@@ -1389,7 +1410,10 @@ impl Kernel {
                 completion_code,
             } => match which {
                 // The process called the `exit-terminate` system call.
-                0 => process.terminate(Some(completion_code as u32)),
+                0 => {
+                    debug!("TERMINATION {}", self.num_kernel_entrances.get());
+                    process.terminate(Some(completion_code as u32))
+                }
                 // The process called the `exit-restart` system call.
                 1 => process.try_restart(Some(completion_code as u32)),
                 // The process called an invalid variant of the Exit

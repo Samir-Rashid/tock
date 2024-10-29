@@ -180,6 +180,7 @@ impl<const NUM_PROCS: u8> SyscallDriver for IPC<NUM_PROCS> {
             {
                 let cb_type = IPCUpcallType::Service;
 
+                // Get service's [`ProcessId`]
                 let other_process =
                     self.data
                         .kernel
