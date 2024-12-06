@@ -34,6 +34,10 @@ use crate::syscall::{Syscall, YieldCall};
 use crate::syscall_driver::CommandReturn;
 use crate::upcall::{Upcall, UpcallId};
 use crate::utilities::cells::NumericCellExt;
+// use crate::arch::cor
+use core::ptr;
+
+// use crate::core::arch::cortexm::dwt;
 
 /// Threshold in microseconds to consider a process's timeslice to be exhausted.
 /// That is, Tock will skip re-scheduling a process if its remaining timeslice
@@ -1411,7 +1415,16 @@ impl Kernel {
             } => match which {
                 // The process called the `exit-terminate` system call.
                 0 => {
+                    let ptr = 0xe0001004 as *const u32;
+                    let value = unsafe { ptr::read_volatile(ptr) };
+                    debug!("CYCCNT: {}", value);
                     debug!("TERMINATION {}", self.num_kernel_entrances.get());
+
+                    // self.registers.cyccnt.read(CycleCount::CYCCNT) as u64;
+
+                    let value = unsafe { ptr::read_volatile(ptr) };
+                    debug!("CYCCNT: {}", value);
+
                     process.terminate(Some(completion_code as u32))
                 }
                 // The process called the `exit-restart` system call.

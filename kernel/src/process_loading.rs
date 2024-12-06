@@ -14,6 +14,7 @@
 
 use core::cell::Cell;
 use core::fmt;
+use core::ptr::read_volatile;
 
 use crate::capabilities::ProcessManagementCapability;
 use crate::config;
@@ -143,6 +144,16 @@ pub fn load_processes<C: Chip>(
     fault_policy: &'static dyn ProcessFaultPolicy,
     _capability_management: &dyn ProcessManagementCapability,
 ) -> Result<(), ProcessLoadError> {
+    // measure the time to load the apps once the kernel is running
+
+    const RTC_CTR_ADDR: u32 = 0x40011504;
+    const RTC_ADDR: *const u32 = (RTC_CTR_ADDR) as *const u32;
+    let mut time: u32;
+    unsafe {
+        time = read_volatile(RTC_ADDR);
+    }
+    debug!("Time to start loading apps: {}", time);
+
     load_processes_from_flash::<C, ProcessStandardDebugFull>(
         kernel,
         chip,
@@ -162,6 +173,11 @@ pub fn load_processes<C: Chip>(
             }
         });
     }
+    unsafe {
+        time = read_volatile(RTC_ADDR);
+    }
+    debug!("Time to start loading apps(after): {}", time);
+
     Ok(())
 }
 
@@ -363,6 +379,7 @@ fn load_process<C: Chip, D: ProcessStandardDebug>(
     storage_policy: &'static dyn ProcessStandardStoragePermissionsPolicy<C, D>,
 ) -> Result<(&'static mut [u8], Option<&'static dyn Process>), (&'static mut [u8], ProcessLoadError)>
 {
+    // TODO: benchmark
     if config::CONFIG.debug_load_processes {
         debug!(
             "Loading: process flash={:#010X}-{:#010X} ram={:#010X}-{:#010X}",

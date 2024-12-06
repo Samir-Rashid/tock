@@ -202,6 +202,9 @@ pub type Eui64Driver = components::eui64::Eui64ComponentType;
 
 /// Supported drivers by the platform
 pub struct Platform {
+    nonvolatile_storage:
+        &'static capsules_extra::nonvolatile_storage_driver::NonvolatileStorage<'static>,
+    // app_flash: &'static capsules_extra::app_flash_driver::AppFlash<'static>,
     debug_queue: (),
     ble_radio: &'static capsules_extra::ble_advertising_driver::BLE<
         'static,
@@ -254,6 +257,10 @@ impl SyscallDriverLookup for Platform {
         F: FnOnce(Option<&dyn kernel::syscall::SyscallDriver>) -> R,
     {
         match driver_num {
+            // capsules_extra::app_flash_driver::DRIVER_NUM => f(Some(self.app_flash)),
+            capsules_extra::nonvolatile_storage_driver::DRIVER_NUM => {
+                f(Some(self.nonvolatile_storage))
+            }
             capsules_core::console::DRIVER_NUM => f(Some(self.console)),
             capsules_core::gpio::DRIVER_NUM => f(Some(self.gpio)),
             capsules_core::alarm::DRIVER_NUM => f(Some(self.alarm)),
@@ -656,6 +663,48 @@ pub unsafe fn start() -> (
     ));
 
     //--------------------------------------------------------------------------
+    // APP FLASH
+    //--------------------------------------------------------------------------
+
+    // let mux_flash = components::flash::FlashMuxComponent::new(&base_peripherals.nvmc).finalize(
+    //     components::flash_mux_component_static!(nrf52840::nvmc::Nvmc),
+    // );
+
+    // let virtual_app_flash = components::flash::FlashUserComponent::new(mux_flash).finalize(
+    //     components::flash_user_component_static!(nrf52840::nvmc::Nvmc),
+    // );
+
+    // let app_flash = components::app_flash_driver::AppFlashComponent::new(
+    //     board_kernel,
+    //     capsules_extra::app_flash_driver::DRIVER_NUM,
+    //     virtual_app_flash,
+    // )
+    // .finalize(components::app_flash_component_static!(
+    //     capsules_core::virtualizers::virtual_flash::FlashUser<'static, nrf52840::nvmc::Nvmc>,
+    //     512
+    // ));
+
+        //--------------------------------------------------------------------------
+    // NONVOLATILE STORAGE
+    //--------------------------------------------------------------------------
+
+    // 32kB of userspace-accessible storage, page aligned:
+    kernel::storage_volume!(APP_STORAGE, 32);
+
+    let nonvolatile_storage = components::nonvolatile_storage::NonvolatileStorageComponent::new(
+        board_kernel,
+        capsules_extra::nonvolatile_storage_driver::DRIVER_NUM,
+        &nrf52840_peripherals.nrf52.nvmc,
+        core::ptr::addr_of!(APP_STORAGE) as usize,
+        APP_STORAGE.len(),
+        // No kernel-writeable flash:
+        core::ptr::null::<()>() as usize,
+        0,
+    )
+    .finalize(components::nonvolatile_storage_component_static!(
+        nrf52840::nvmc::Nvmc
+    ));
+    //--------------------------------------------------------------------------
     // RANDOM NUMBER GENERATOR
     //--------------------------------------------------------------------------
 
@@ -916,6 +965,9 @@ pub unsafe fn start() -> (
         kv_driver,
         scheduler,
         systick: cortexm4::systick::SysTick::new_with_calibration(64000000),
+        nonvolatile_storage,
+
+        // app_flash,
     };
 
     let _ = platform.pconsole.start();
